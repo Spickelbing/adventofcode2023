@@ -1,6 +1,6 @@
 use eyre::anyhow;
 use lazy_regex::regex;
-use std::{collections::HashMap, fs};
+use std::{collections::HashMap, fs, cmp::max};
 
 #[derive(Eq, PartialEq, Hash, Debug)]
 enum Cube {
@@ -27,8 +27,33 @@ fn main() -> eyre::Result<()> {
     }
 
     println!("Task 1: {}", solve_task_1(&game_records));
+    println!("Task 2: {}", solve_task_2(&game_records));
 
     Ok(())
+}
+
+fn solve_task_2(game_records: &Vec<GameRecord>) -> u32 {
+    let powers = game_records.iter().map(|game_record| {
+        let mut blue_min = 0;
+        let mut green_min = 0;
+        let mut red_min = 0;
+
+        for revelation in &game_record.revelations {
+            if let Some(&blue_amount) = revelation.get(&Cube::Blue) {
+                blue_min = max(blue_min, blue_amount);
+            }
+            if let Some(&red_amount) = revelation.get(&Cube::Red) {
+                red_min = max(red_min, red_amount);
+            }
+            if let Some(&green_amount) = revelation.get(&Cube::Green) {
+                green_min = max(green_min, green_amount);
+            }
+        }
+
+        blue_min * green_min * red_min
+    });
+
+    powers.sum()
 }
 
 fn solve_task_1(game_records: &Vec<GameRecord>) -> u32 {
