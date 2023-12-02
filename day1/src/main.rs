@@ -1,6 +1,4 @@
-use once_cell::sync::Lazy;
-use regex::Regex;
-use std::{collections::HashMap, fs, io};
+use std::{fs, io};
 
 fn main() -> Result<(), io::Error> {
     let input = fs::read_to_string("input")?;
@@ -44,36 +42,23 @@ fn digits_in(string: &str) -> Vec<u32> {
 }
 
 fn digits_and_spelled_out_digits_in(string: &str) -> Vec<u32> {
-    static NUMBERS_REGEX: Lazy<Regex> = Lazy::new(|| {
-        Regex::new(r"((?<word>one|two|three|four|five|six|seven|eight|nine)|(?<digit>[0-9]))")
-            .unwrap()
-    });
-    static WORD_TO_NUMBER: Lazy<HashMap<&str, u32>> = Lazy::new(|| {
-        HashMap::from([
-            ("one", 1),
-            ("two", 2),
-            ("three", 3),
-            ("four", 4),
-            ("five", 5),
-            ("six", 6),
-            ("seven", 7),
-            ("eight", 8),
-            ("nine", 9),
-        ])
-    });
+    static WORDS: [&str; 9] = [
+        "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+    ];
 
     let mut digits = Vec::new();
-    for search_offset in 0..string.len() {
-        if let Some(captures) = NUMBERS_REGEX.captures_at(string, search_offset) {
-            if let Some(word_match) = captures.name("word") {
-                let word = word_match.as_str();
-                let number = WORD_TO_NUMBER.get(word).unwrap(); // regex guarantees success
-                digits.push(number);
-            }
 
-            if let Some(digit_match) = captures.name("digit") {
-                let number = &digit_match.as_str().parse::<u32>().unwrap(); // regex guarantees success
-                digits.push(number);
+    for search_offset in 0..string.len() {
+        let substring = &string[search_offset..];
+
+        let first_char = substring.chars().next().unwrap();
+        if let Some(number) = first_char.to_digit(10) {
+            digits.push(number);
+        } else {
+            for (number, &word) in WORDS.iter().enumerate() {
+                if substring.starts_with(word) {
+                    digits.push((number + 1) as u32);
+                }
             }
         }
     }
