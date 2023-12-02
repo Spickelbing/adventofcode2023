@@ -5,18 +5,22 @@ use std::{collections::HashMap, fs, io};
 fn main() -> Result<(), io::Error> {
     let input = fs::read_to_string("input")?;
 
-    {
-        let digits: Vec<_> = input.lines().map(digits_in).collect();
-        println!("Part 1: {}", calibration_values(digits).iter().sum::<u32>());
-    }
+    let digits_task_1: Vec<_> = input.lines().map(digits_in).collect();
 
-    {
-        let digits: Vec<_> = input
-            .lines()
-            .map(digits_and_spelled_out_digits_in)
-            .collect();
-        println!("Part 2: {}", calibration_values(digits).iter().sum::<u32>());
-    }
+    println!(
+        "Part 1: {}",
+        calibration_values(digits_task_1).iter().sum::<u32>()
+    );
+
+    let digits_task_2: Vec<_> = input
+        .lines()
+        .map(digits_and_spelled_out_digits_in)
+        .collect();
+
+    println!(
+        "Part 2: {}",
+        calibration_values(digits_task_2).iter().sum::<u32>()
+    );
 
     return Ok(());
 }
@@ -41,7 +45,8 @@ fn digits_in(string: &str) -> Vec<u32> {
 
 fn digits_and_spelled_out_digits_in(string: &str) -> Vec<u32> {
     static NUMBERS_REGEX: Lazy<Regex> = Lazy::new(|| {
-        Regex::new(r"((?<word>one|two|three|four|five|six|seven|eight|nine)|(?<digit>\d))").unwrap()
+        Regex::new(r"((?<word>one|two|three|four|five|six|seven|eight|nine)|(?<digit>[0-9]))")
+            .unwrap()
     });
     static WORD_TO_NUMBER: Lazy<HashMap<&str, u32>> = Lazy::new(|| {
         HashMap::from([
@@ -62,13 +67,13 @@ fn digits_and_spelled_out_digits_in(string: &str) -> Vec<u32> {
         if let Some(captures) = NUMBERS_REGEX.captures_at(string, search_offset) {
             if let Some(word_match) = captures.name("word") {
                 let word = word_match.as_str();
-                if let Some(&number) = WORD_TO_NUMBER.get(word) {
-                    digits.push(number);
-                }
-            } else if let Some(digit_match) = captures.name("digit") {
-                if let Ok(number) = digit_match.as_str().parse::<u32>() {
-                    digits.push(number);
-                }
+                let number = WORD_TO_NUMBER.get(word).unwrap(); // regex guarantees success
+                digits.push(number);
+            }
+
+            if let Some(digit_match) = captures.name("digit") {
+                let number = &digit_match.as_str().parse::<u32>().unwrap(); // regex guarantees success
+                digits.push(number);
             }
         }
     }
