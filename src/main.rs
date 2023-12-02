@@ -42,9 +42,8 @@ fn digits_in(string: &str) -> Vec<u32> {
 fn digits_and_spelled_out_digits_in(string: &str) -> Vec<u32> {
     static NUMBERS_REGEX: Lazy<Regex> = Lazy::new(|| {
         Regex::new(r"((?<word>one|two|three|four|five|six|seven|eight|nine)|(?<digit>\d))").unwrap()
-        // fehlerhaft: überlappungen werden NICHT erfasst, sollen sie aber. z.b. "twone" soll als "[2, 1]" und "nineight" soll als [9, 8] erfasst werden
     });
-    static WORDS_TO_INT: Lazy<HashMap<&str, u32>> = Lazy::new(|| {
+    static WORD_TO_NUMBER: Lazy<HashMap<&str, u32>> = Lazy::new(|| {
         HashMap::from([
             ("one", 1),
             ("two", 2),
@@ -58,18 +57,21 @@ fn digits_and_spelled_out_digits_in(string: &str) -> Vec<u32> {
         ])
     });
 
-    let maybe_numbers = NUMBERS_REGEX.captures_iter(string).map(|captures| {
-        if let Some(word_match) = captures.name("word") {
-            let word = word_match.as_str();
-            WORDS_TO_INT.get(word).map(u32::to_owned)
-        } else if let Some(digit_match) = captures.name("digit") {
-            digit_match.as_str().parse::<u32>().ok()
-        } else {
-            None
+    let mut digits = Vec::new();
+    for search_offset in 0..string.len() {
+        if let Some(captures) = NUMBERS_REGEX.captures_at(string, search_offset) {
+            if let Some(word_match) = captures.name("word") {
+                let word = word_match.as_str();
+                if let Some(&number) = WORD_TO_NUMBER.get(word) {
+                    digits.push(number);
+                }
+            } else if let Some(digit_match) = captures.name("digit") {
+                if let Ok(number) = digit_match.as_str().parse::<u32>() {
+                    digits.push(number);
+                }
+            }
         }
-    });
+    }
 
-    maybe_numbers
-        .filter_map(|maybe_number| maybe_number)
-        .collect()
+    digits
 }
