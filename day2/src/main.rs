@@ -1,15 +1,13 @@
 use eyre::anyhow;
 use lazy_regex::regex;
-use std::{collections::HashMap, fs, cmp::max};
+use std::{cmp::max, fs};
 
-#[derive(Eq, PartialEq, Hash, Debug)]
-enum Cube {
-    Red,
-    Green,
-    Blue,
+#[derive(Debug)]
+struct CubeHandful {
+    red_cubes: u32,
+    green_cubes: u32,
+    blue_cubes: u32,
 }
-
-type CubeHandful = HashMap<Cube, u32>;
 
 #[derive(Debug)]
 struct GameRecord {
@@ -19,7 +17,6 @@ struct GameRecord {
 
 fn main() -> eyre::Result<()> {
     let input = fs::read_to_string("input")?;
-
     let mut game_records = Vec::new();
     for line in input.lines() {
         let game_record = GameRecord::try_from(line)?;
@@ -39,15 +36,9 @@ fn solve_task_2(game_records: &Vec<GameRecord>) -> u32 {
         let mut red_min = 0;
 
         for revelation in &game_record.revelations {
-            if let Some(&blue_amount) = revelation.get(&Cube::Blue) {
-                blue_min = max(blue_min, blue_amount);
-            }
-            if let Some(&red_amount) = revelation.get(&Cube::Red) {
-                red_min = max(red_min, red_amount);
-            }
-            if let Some(&green_amount) = revelation.get(&Cube::Green) {
-                green_min = max(green_min, green_amount);
-            }
+            blue_min = max(blue_min, revelation.blue_cubes);
+            red_min = max(red_min, revelation.red_cubes);
+            green_min = max(green_min, revelation.green_cubes);
         }
 
         blue_min * green_min * red_min
@@ -65,17 +56,9 @@ fn solve_task_1(game_records: &Vec<GameRecord>) -> u32 {
         .iter()
         .filter(|game_record| {
             game_record.revelations.iter().all(|handful| {
-                let red_impossible = handful
-                    .get(&Cube::Red)
-                    .is_some_and(|&red_amount| red_amount > red_max);
-                let green_impossible = handful
-                    .get(&Cube::Green)
-                    .is_some_and(|&green_amount| green_amount > green_max);
-                let blue_impossible = handful
-                    .get(&Cube::Blue)
-                    .is_some_and(|&blue_amount| blue_amount > blue_max);
-
-                !red_impossible && !green_impossible && !blue_impossible
+                handful.red_cubes <= red_max
+                    && handful.green_cubes <= green_max
+                    && handful.blue_cubes <= blue_max
             })
         })
         .map(|game_record| game_record.id)
@@ -89,22 +72,6 @@ impl TryFrom<&str> for GameRecord {
         let id_captures = id_regex.captures(line).ok_or(anyhow!("invalid game id"))?;
         let id = id_captures["id"].parse::<u32>().unwrap(); // ok because regex guarantees valid u32
 
-        let parse_cube_amount = |string: &str| -> Result<(Cube, u32), Self::Error> {
-            let captures = regex!(r"(?<amount>[1-9][0-9]*)\s+(?<cube>\w+)")
-                .captures(string)
-                .ok_or(anyhow!("invalid cube amount"))?;
-
-            let amount = captures["amount"].parse::<u32>().unwrap(); // ok because regex guarantees valid u32
-            let cube = match &captures["cube"] {
-                "blue" => Cube::Blue,
-                "green" => Cube::Green,
-                "red" => Cube::Red,
-                _ => return Err(anyhow!("invalid type of cube")),
-            };
-
-            Ok((cube, amount))
-        };
-
         let revelations_start = id_captures[0].len();
 
         let mut revelations = Vec::new();
@@ -112,10 +79,23 @@ impl TryFrom<&str> for GameRecord {
             .split_terminator(";")
             .map(str::trim_start)
         {
-            let mut revelation = HashMap::new();
-            for cube_amount in handful.split_terminator(",") {
-                let (cube, amount) = parse_cube_amount(cube_amount)?;
-                revelation.insert(cube, amount);
+            let mut revelation = CubeHandful {
+                red_cubes: 0,
+                green_cubes: 0,
+                blue_cubes: 0,
+            };
+            for cube_amount_string in handful.split_terminator(",") {
+                let captures = regex!(r"(?<amount>[1-9][0-9]*)\s+(?<cube>\w+)")
+                    .captures(cube_amount_string)
+                    .ok_or(anyhow!("invalid cube amount"))?;
+                let amount = captures["amount"].parse::<u32>().unwrap(); // ok because regex guarantees valid u32
+                
+                match &captures["cube"] {
+                    "blue" => revelation.blue_cubes = amount,
+                    "green" => revelation.green_cubes = amount,
+                    "red" => revelation.red_cubes = amount,
+                    _ => return Err(anyhow!("invalid type of cube")),
+                }
             }
             revelations.push(revelation);
         }
