@@ -40,8 +40,8 @@ fn main() -> Result<(), Error> {
     while !card_indices_to_process.is_empty() {
         for card_index in card_indices_to_process {
             n_scratchcards += 1;
-            let card_matches = n_matches_per_card[card_index];
-            let indices_of_won_cards = ((card_index + 1)..(card_index + 1 + card_matches))
+            let n_card_matches = n_matches_per_card[card_index];
+            let indices_of_won_cards = ((card_index + 1)..(card_index + 1 + n_card_matches))
                 .take_while(|&card_index| card_index < numbers.len());
             new_card_indices.extend(indices_of_won_cards);
         }
