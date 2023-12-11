@@ -29,29 +29,38 @@ fn main() -> Result<(), Report> {
         .flat_map(Direction::try_from)
         .collect();
 
-    let mut node_mappings: HashMap<String, (String, String)> = HashMap::new();
+    let mut node_to_index_map: HashMap<String, usize> = HashMap::new();
+    let mut next_index_to_assign = 0;
     for line in input.lines().skip(2) {
-        let node_regex = regex!(r"(\w{3}) = \((\w{3}), (\w{3})\)");
-        let captures = node_regex.captures(line).unwrap();
-        let key = captures[1].to_string();
-        node_mappings.insert(
-            key.clone(),
-            (captures[2].to_string(), captures[3].to_string()),
-        );
+        let (node, _) = line.split_once(" = ").unwrap();
+        node_to_index_map.insert(node.to_string(), next_index_to_assign);
+        next_index_to_assign += 1;
     }
 
+    let mut nodes: Vec<(usize, usize)> = Vec::new();
+    for line in input.lines().skip(2) {
+        let node_regex = regex!(r"^\w{3} = \((\w{3}), (\w{3})\)$");
+        let captures = node_regex.captures(line).unwrap();
+
+        let left_node_index = node_to_index_map[&captures[1]];
+        let right_node_index = node_to_index_map[&captures[2]];
+
+        nodes.push((left_node_index, right_node_index));
+    }
+
+    let last_node_index = node_to_index_map["ZZZ"];
     let mut num_steps: usize = 0;
-    let mut current_node_key = &String::from("AAA");
+    let mut current_node_index: usize = node_to_index_map["AAA"];
     for direction in directions.iter().cycle() {
-        if current_node_key == "ZZZ" {
+        if current_node_index == last_node_index {
             break;
         }
         num_steps += 1;
 
-        let (left_node_key, right_node_key) = &node_mappings[current_node_key];
-        current_node_key = match direction {
-            Direction::Left => left_node_key,
-            Direction::Right => right_node_key,
+        let (left_node_index, right_node_index) = nodes[current_node_index];
+        current_node_index = match direction {
+            Direction::Left => left_node_index,
+            Direction::Right => right_node_index,
         };
     }
 
