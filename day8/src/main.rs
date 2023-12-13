@@ -90,10 +90,9 @@ fn main() -> Result<(), Report> {
     // after some number of iterations through the full list of directions.
     // I feel this task is a bit wacky because solving it requires knowledge of this restriction
     // and it is only vaguely implied in the task description.
-    let (_, mut lcm, _) = num_steps_from_start_to_dest[0];
-    for (_, num_steps, _) in num_steps_from_start_to_dest.iter().skip(1) {
-        lcm = lcm.lcm(num_steps);
-    }
+    let lcm = num_steps_from_start_to_dest
+        .iter()
+        .fold(1, |acc, (_, num_steps, _)| acc.lcm(num_steps));
 
     println!("Task 2: {lcm}");
 
