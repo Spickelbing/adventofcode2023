@@ -54,62 +54,48 @@ fn main() -> Result<(), Report> {
         }
     }
 
-    {
-        let mut num_steps: usize = 0;
-        let mut current_node = &String::from("AAA");
-        for direction in directions.iter().cycle() {
-            if current_node == "ZZZ" {
-                break;
-            }
-            num_steps += 1;
-
-            let (left_node, right_node) = &network[current_node];
-            current_node = match direction {
-                Direction::Left => left_node,
-                Direction::Right => right_node,
-            };
-        }
-
-        println!("Task 1: {num_steps}");
-    };
-
-    {
-        let num_steps_from_start_to_dest: Vec<(usize, &String)> = start_nodes
-            .iter()
-            .map(|start_node| {
-                let mut num_steps = 0;
-                let mut current_node = start_node;
-                for direction in directions.iter().cycle() {
-                    if num_steps % directions.len() == 0 && destination_nodes.contains(current_node)
-                    {
-                        break;
-                    }
-                    num_steps += 1;
-
-                    let (left_node, right_node) = &network[current_node];
-                    current_node = match direction {
-                        Direction::Left => left_node,
-                        Direction::Right => right_node,
-                    };
+    let num_steps_from_start_to_dest: Vec<(&String, usize, &String)> = start_nodes
+        .iter()
+        .map(|start_node| {
+            let mut num_steps = 0;
+            let mut current_node = start_node;
+            for direction in directions.iter().cycle() {
+                if num_steps % directions.len() == 0 && destination_nodes.contains(current_node) {
+                    break;
                 }
+                num_steps += 1;
 
-                (num_steps, current_node)
-            })
-            .collect();
+                let (left_node, right_node) = &network[current_node];
+                current_node = match direction {
+                    Direction::Left => left_node,
+                    Direction::Right => right_node,
+                };
+            }
 
-        // This works because the input was generated such that once a destination node is reached,
-        // there is a loop in the network with regard to the list of directions.
-        // That same destination node is reached again exactly on following the last direction
-        // after some number of iterations through the full list of directions.
-        // I feel this task is a bit wacky because solving it requires knowledge of this restriction
-        // and it is only vaguely implied in the task description.
-        let (mut lcm, _) = num_steps_from_start_to_dest[0];
-        for (num_steps, _) in num_steps_from_start_to_dest.iter().skip(1) {
-            lcm = lcm.lcm(num_steps);
-        }
+            (start_node, num_steps, current_node)
+        })
+        .collect();
 
-        println!("Task 2: {lcm}");
+    let (_, num_steps_task_1, _) = num_steps_from_start_to_dest
+        .iter()
+        .find(|&(start_node, _, destination_node)| {
+            start_node == &"AAA" && destination_node == &"ZZZ"
+        })
+        .unwrap();
+    println!("Task 1: {num_steps_task_1}");
+
+    // This works because the input was generated such that once a destination node is reached,
+    // there is a loop in the network with regard to the list of directions.
+    // That same destination node is reached again exactly on following the last direction
+    // after some number of iterations through the full list of directions.
+    // I feel this task is a bit wacky because solving it requires knowledge of this restriction
+    // and it is only vaguely implied in the task description.
+    let (_, mut lcm, _) = num_steps_from_start_to_dest[0];
+    for (_, num_steps, _) in num_steps_from_start_to_dest.iter().skip(1) {
+        lcm = lcm.lcm(num_steps);
     }
+
+    println!("Task 2: {lcm}");
 
     Ok(())
 }
