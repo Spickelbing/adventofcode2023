@@ -1,5 +1,6 @@
 use eyre::{anyhow, Report};
 use lazy_regex::regex;
+use num::Integer;
 use std::{
     collections::{HashMap, HashSet},
     fs,
@@ -32,87 +33,82 @@ fn main() -> Result<(), Report> {
         .flat_map(Direction::try_from)
         .collect();
 
-    let mut node_to_index_map: HashMap<String, usize> = HashMap::new();
-    let mut start_node_indices = HashSet::<usize>::new();
-    let mut destination_node_indices = HashSet::<usize>::new();
-    let mut next_index_to_assign = 0;
+    let mut network: HashMap<String, (String, String)> = HashMap::new();
+    let mut start_nodes = HashSet::<String>::new();
+    let mut destination_nodes = HashSet::<String>::new();
 
     for line in input.lines().skip(2) {
-        let (node, _) = line.split_once(" = ").unwrap();
-        node_to_index_map.insert(node.to_string(), next_index_to_assign);
+        let node_regex = regex!(r"(\w{3}) = \((\w{3}), (\w{3})\)");
+        let captures = node_regex.captures(line).unwrap();
+        let node = captures[1].to_string();
+
+        network.insert(
+            node.clone(),
+            (captures[2].to_string(), captures[3].to_string()),
+        );
 
         if node.ends_with('A') {
-            start_node_indices.insert(next_index_to_assign);
+            start_nodes.insert(node);
         } else if node.ends_with('Z') {
-            destination_node_indices.insert(next_index_to_assign);
+            destination_nodes.insert(node);
         }
-
-        next_index_to_assign += 1;
     }
 
-    let nodes: Vec<(usize, usize)> = input
-        .lines()
-        .skip(2)
-        .map(|line| {
-            let node_regex = regex!(r"^\w{3} = \((\w{3}), (\w{3})\)$");
-            let captures = node_regex.captures(line).unwrap();
-
-            let left_node_index = node_to_index_map[&captures[1]];
-            let right_node_index = node_to_index_map[&captures[2]];
-
-            (left_node_index, right_node_index)
-        })
-        .collect();
-
-    // task 1
     {
-        let destination_node_index = node_to_index_map["ZZZ"];
-        let mut current_node_index: usize = node_to_index_map["AAA"];
-
         let mut num_steps: usize = 0;
+        let mut current_node = &String::from("AAA");
         for direction in directions.iter().cycle() {
-            if current_node_index == destination_node_index {
+            if current_node == "ZZZ" {
                 break;
             }
             num_steps += 1;
 
-            let (left_node_index, right_node_index) = nodes[current_node_index];
-            current_node_index = match direction {
-                Direction::Left => left_node_index,
-                Direction::Right => right_node_index,
+            let (left_node, right_node) = &network[current_node];
+            current_node = match direction {
+                Direction::Left => left_node,
+                Direction::Right => right_node,
             };
         }
 
         println!("Task 1: {num_steps}");
     };
 
-    // task 2
     {
-        let mut current_node_indices: HashSet<usize> = start_node_indices.clone();
-        let mut next_node_indices = HashSet::<usize>::with_capacity(current_node_indices.len());
-        let mut num_steps: usize = 0;
+        let num_steps_from_start_to_dest: Vec<(usize, &String)> = start_nodes
+            .iter()
+            .map(|start_node| {
+                let mut num_steps = 0;
+                let mut current_node = start_node;
+                for direction in directions.iter().cycle() {
+                    if num_steps % directions.len() == 0 && destination_nodes.contains(current_node)
+                    {
+                        break;
+                    }
+                    num_steps += 1;
 
-        for direction in directions.iter().cycle() {
-            if current_node_indices.is_subset(&destination_node_indices) {
-                break;
-            }
-            num_steps += 1;
+                    let (left_node, right_node) = &network[current_node];
+                    current_node = match direction {
+                        Direction::Left => left_node,
+                        Direction::Right => right_node,
+                    };
+                }
 
-            for &node_index in &current_node_indices {
-                let (left_node_index, right_node_index) = nodes[node_index];
-                match direction {
-                    Direction::Left => next_node_indices.insert(left_node_index),
-                    Direction::Right => next_node_indices.insert(right_node_index),
-                };
-            }
+                (num_steps, current_node)
+            })
+            .collect();
 
-            let mut tmp = current_node_indices;
-            tmp.clear();
-            current_node_indices = next_node_indices;
-            next_node_indices = tmp;
+        // This works because the input was generated such that once a destination node is reached,
+        // there is a loop in the network with regard to the list of directions.
+        // That same destination node is reached again exactly on following the last direction
+        // after some number of iterations through the full list of directions.
+        // I feel this task is a bit wacky because solving it requires knowledge of this restriction
+        // and it is only vaguely implied in the task description.
+        let (mut lcm, _) = num_steps_from_start_to_dest[0];
+        for (num_steps, _) in num_steps_from_start_to_dest.iter().skip(1) {
+            lcm = lcm.lcm(num_steps);
         }
 
-        println!("Task 2: {num_steps}");
+        println!("Task 2: {lcm}");
     }
 
     Ok(())
