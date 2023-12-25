@@ -21,11 +21,10 @@ fn solve_task_1(grid: &Grid) -> usize {
         let &next_position = grid
             .positions_of_traversable_pipes_from(current_position)
             .iter()
-            .filter(|coordinate| match maybe_previous_position {
-                Some(previous_position) => previous_position != **coordinate,
+            .find(|position| match maybe_previous_position {
+                Some(previous_position) => previous_position != **position,
                 _ => true,
             })
-            .next()
             .unwrap();
 
         loop_length += 1;
